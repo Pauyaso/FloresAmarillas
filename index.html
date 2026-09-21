@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flores amarillas para Gianella 🌻</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #07060a;
+    --gold: #ffd23f;
+    --petal: #ffb703;
+    --leaf: #3a7d44;
+    --cream: #fff8e1;
+    --ink: #3b2a05;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  :root[data-theme="light"], :root[data-theme="dark"] { --night: #07060a; }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { height: 100%; margin: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background: var(--night);
+    color: var(--cream);
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #floaters { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .phrase {
+    position: absolute;
+    font-family: "Caveat", "Segoe Script", cursive;
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(255, 210, 63, .7);
+    white-space: nowrap;
+    opacity: 0;
+    animation: drift var(--dur, 9s) ease-in-out forwards;
+  }
+  .flower {
+    position: absolute;
+    opacity: 0;
+    filter: drop-shadow(0 0 10px rgba(255, 190, 0, .55));
+    animation: drift var(--dur, 10s) ease-in-out forwards;
+  }
+  @keyframes drift {
+    0%   { opacity: 0; transform: translateY(20px) scale(.6) rotate(var(--r0, 0deg)); }
+    15%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-60px) scale(1) rotate(var(--r1, 0deg)); }
+  }
+  #hint {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    font-size: 15px;
+    color: rgba(255, 248, 225, .75);
+    background: rgba(255, 210, 63, .12);
+    border: 1px solid rgba(255, 210, 63, .35);
+    padding: 10px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity .6s;
+    white-space: nowrap;
+  }
+  #hint:focus-visible, .card button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .veil {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    padding: 20px;
+    background: rgba(7, 6, 10, .55);
+    opacity: 0; pointer-events: none;
+    transition: opacity .7s ease;
+  }
+  .veil.open { opacity: 1; pointer-events: auto; }
+  .card {
+    width: min(360px, 100%);
+    background: var(--cream);
+    color: var(--ink);
+    border-radius: 22px 22px 22px 6px;
+    padding: 28px 24px 22px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(255, 190, 0, .45);
+    transform: translateY(30px) rotate(-2deg) scale(.92);
+    transition: transform .8s cubic-bezier(.2, .9, .3, 1.2);
+    position: relative;
+  }
+  .veil.open .card { transform: translateY(0) rotate(-1deg) scale(1); }
+  .card .bloom { font-size: 64px; line-height: 1; margin-top: -60px; }
+  .card h1 {
+    font-family: "Caveat", "Segoe Script", cursive;
+    font-size: 44px; line-height: 1.05; margin: 10px 0 8px; color: #c77d00;
+  }
+  .card p { font-size: 17px; line-height: 1.55; margin: 0 0 12px; }
+  .card .sign { font-family: "Caveat", cursive; font-size: 26px; margin: 4px 0 16px; }
+  .card button {
+    font-family: inherit; font-weight: 700; font-size: 15px;
+    background: var(--gold); color: var(--ink);
+    border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .phrase, .flower { animation-duration: 0.01s !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div id="floaters" aria-hidden="true"></div>
+<button id="hint" type="button" style="display:none">Toca para abrir tu mensaje 💛</button>
+
+<div class="veil open" id="veil" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+  <div class="card">
+    <div class="bloom" aria-hidden="true">🌻</div>
+    <h1 id="cardTitle">Para ti, Gianella 💛</h1>
+    <p id="msg">Como sé que lo tuyo no es cuidar flores, te regalo estas, que no se marchitan. Para que sepas que cada día a tu lado brilla un poquito más.</p>
+    <div class="sign" id="sign"></div>
+    <button type="button" id="close">Ver las flores otra vez</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Personalización por enlace: ?para=Lucía&de=Carlos
+  const q = new URLSearchParams(location.search);
+  const para = (q.get("para") || "Gianella").trim().slice(0, 30);
+  const de = (q.get("de") || "").trim().slice(0, 30);
+  if (para) document.getElementById("cardTitle").textContent = `Para ti, ${para} 💛`;
+  if (de) document.getElementById("sign").textContent = `— ${de}`;
+
+  const phrases = ["Te quiero", "Eres mi sol ☀️", "Mi amor", "Siempre juntos", "Me encantas",
+                   "Eres preciosa", "Mi flor favorita", "Contigo todo brilla", "Te adoro"];
+  if (para) phrases.push(para + " 💛");
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const cv = document.getElementById("sky");
+  const ctx = cv.getContext("2d");
+  let W, H, dpr, t = 0;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildHeart();
+    if (reduce) { ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, W, H); draw(); }
+  }
+
+  // Polvo dorado que gira en espiral
+  const dust = Array.from({ length: 420 }, () => ({
+    a: Math.random() * Math.PI * 2,
+    r: Math.pow(Math.random(), .6),
+    s: .002 + Math.random() * .006,
+    z: .4 + Math.random() * 1.6,
+    tw: Math.random() * Math.PI * 2
+  }));
+
+  // Partículas que forman el corazón
+  let heart = [];
+  function buildHeart() {
+    const scale = Math.min(W, H) / 38;
+    const cx = W / 2, cy = H * .36;
+    heart = [];
+    for (let i = 0; i < 260; i++) {
+      const k = (i / 260) * Math.PI * 2;
+      const x = 16 * Math.pow(Math.sin(k), 3);
+      const y = -(13 * Math.cos(k) - 5 * Math.cos(2 * k) - 2 * Math.cos(3 * k) - Math.cos(4 * k));
+      heart.push({
+        tx: cx + x * scale, ty: cy + y * scale,
+        x: reduce ? cx + x * scale : W / 2 + (Math.random() - .5) * W,
+        y: reduce ? cy + y * scale : H * .65 + (Math.random() - .5) * 40,
+        z: .6 + Math.random() * 1.4, tw: Math.random() * 6
+      });
+    }
+  }
+
+  function draw() {
+    t++;
+    ctx.fillStyle = "rgba(7, 6, 10, 0.28)";
+    ctx.fillRect(0, 0, W, H);
+
+    // Resplandor central
+    const cx = W / 2, cy = H * .65;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * .45);
+    g.addColorStop(0, "rgba(255, 220, 90, 0.20)");
+    g.addColorStop(1, "rgba(255, 220, 90, 0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Galaxia de polvo
+    const R = Math.max(W, H) * .6;
+    for (const p of dust) {
+      p.a += reduce ? 0 : p.s;
+      const x = cx + Math.cos(p.a) * p.r * R;
+      const y = cy + Math.sin(p.a) * p.r * R * .28;
+      const alpha = .35 + .65 * Math.abs(Math.sin(t * .03 + p.tw));
+      ctx.fillStyle = `rgba(255, ${200 + (p.z * 20 | 0)}, 60, ${alpha})`;
+      ctx.beginPath(); ctx.arc(x, y, p.z, 0, 7); ctx.fill();
+    }
+
+    // Corazón que se va formando
+    const pull = Math.min(1, t / 240);
+    const beat = 1 + Math.sin(t * .06) * .025;
+    for (const p of heart) {
+      const tx = W / 2 + (p.tx - W / 2) * beat, ty = H * .36 + (p.ty - H * .36) * beat;
+      p.x += (tx - p.x) * .04 * pull;
+      p.y += (ty - p.y) * .04 * pull;
+      const alpha = .5 + .5 * Math.sin(t * .05 + p.tw);
+      ctx.fillStyle = `rgba(255, 215, 80, ${alpha})`;
+      ctx.shadowColor = "rgba(255, 200, 40, .9)"; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.z, 0, 7); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    if (!reduce) requestAnimationFrame(draw);
+  }
+
+  const layer = document.getElementById("floaters");
+  function spawn(cls, text, size) {
+    const el = document.createElement("div");
+    el.className = cls;
+    el.textContent = text;
+    el.style.left = (4 + Math.random() * (cls === "phrase" ? 52 : 82)) + "%";
+    el.style.top = (15 + Math.random() * 72) + "%";
+    el.style.fontSize = size + "px";
+    el.style.setProperty("--dur", (7 + Math.random() * 5) + "s");
+    el.style.setProperty("--r0", (Math.random() * 30 - 15) + "deg");
+    el.style.setProperty("--r1", (Math.random() * 30 - 15) + "deg");
+    layer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+  const blooms = ["🌻", "🌼", "💐", "🌻", "🌼"];
+  setInterval(() => spawn("flower", blooms[Math.random() * blooms.length | 0], 26 + Math.random() * 30), 700);
+  setInterval(() => spawn("phrase", phrases[Math.random() * phrases.length | 0], 20 + Math.random() * 14), 1300);
+
+  const veil = document.getElementById("veil");
+  const hint = document.getElementById("hint");
+  veil.classList.remove("open");
+  hint.style.display = "";
+  function openCard() { veil.classList.add("open"); hint.style.opacity = 0; document.getElementById("close").focus(); }
+  function closeCard() { veil.classList.remove("open"); hint.style.opacity = 1; }
+  hint.addEventListener("click", openCard);
+  document.getElementById("close").addEventListener("click", closeCard);
+  setTimeout(() => { if (!veil.classList.contains("open")) openCard(); }, 11000);
+
+  addEventListener("resize", resize);
+  resize();
+  if (!reduce) { ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, W, H); draw(); }
+})();
+</script>
+</body>
+</html>
