@@ -3,165 +3,106 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
 <title>Flores amarillas para Gianella 🌻</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --night: #07060a;
-    --gold: #ffd23f;
-    --petal: #ffb703;
-    --leaf: #3a7d44;
-    --cream: #fff8e1;
-    --ink: #3b2a05;
-    box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  :root[data-theme="light"], :root[data-theme="dark"] { --night: #07060a; }
-  *, *::before, *::after { box-sizing: inherit; }
-  html, body { height: 100%; margin: 0; }
-  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-  body {
-    background: var(--night);
-    color: var(--cream);
-    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-    overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
-  }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  #floaters { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-  .phrase {
-    position: absolute;
-    font-family: "Caveat", "Segoe Script", cursive;
-    font-weight: 700;
-    color: var(--gold);
-    text-shadow: 0 0 12px rgba(255, 210, 63, .7);
-    white-space: nowrap;
-    opacity: 0;
-    animation: drift var(--dur, 9s) ease-in-out forwards;
-  }
-  .flower {
-    position: absolute;
-    opacity: 0;
-    filter: drop-shadow(0 0 10px rgba(255, 190, 0, .55));
-    animation: drift var(--dur, 10s) ease-in-out forwards;
-  }
+  :root { color-scheme: dark; --night: #07060a; --gold: #ffd23f; --cream: #fff8e1; --ink: #3b2a05; }
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; }
+  body { background: var(--night); color: var(--cream); font-family: "Nunito", system-ui, sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; cursor: pointer; touch-action: manipulation; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 5px; }
+  button:disabled { cursor: default; opacity: .55; }
+  [hidden] { display: none !important; }
+  #sky, #floaters { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #sky { display: block; }
+  #floaters { pointer-events: none; overflow: hidden; }
+  .intro-note { position: fixed; inset: auto 20px 12%; text-align: center; letter-spacing: .22em; text-transform: uppercase; font-size: 10px; color: #e8d8c5; opacity: 0; animation: intro-note 4.8s ease both; pointer-events: none; }
+  @keyframes intro-note { 15%, 55% { opacity: .7; } 85%, 100% { opacity: 0; } }
+  .scene-copy { position: fixed; top: max(26px, env(safe-area-inset-top)); left: clamp(22px, 5vw, 80px); pointer-events: none; }
+  .eyebrow { margin: 0 0 7px; text-transform: uppercase; letter-spacing: .24em; font-size: 9px; color: #c7ad85; }
+  .scene-copy p:last-child { margin: 0; font: 500 clamp(25px, 4vw, 38px)/1.1 "Caveat", cursive; transform: rotate(-3deg); }
+  .scene-ui { opacity: 0; visibility: hidden; transition: opacity 1.6s ease, visibility 1.6s; }
+  body.ready .scene-ui { opacity: 1; visibility: visible; }
+  .phrase, .flower, .photo { position: absolute; opacity: 0; animation: drift var(--dur, 14s) ease-in-out both; will-change: transform, opacity; }
+  .phrase { max-width: min(240px, 75vw); text-align: center; font-family: "Caveat", cursive; color: #ffe4a0; text-shadow: 0 0 18px #e5ac4266; line-height: 1.1; }
+  .flower { filter: drop-shadow(0 0 9px #ffbe0044); }
   @keyframes drift {
-    0%   { opacity: 0; transform: translateY(20px) scale(.6) rotate(var(--r0, 0deg)); }
-    15%  { opacity: 1; }
-    80%  { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-60px) scale(1) rotate(var(--r1, 0deg)); }
+    0% { opacity: 0; transform: translate(0, 18px) scale(.92) rotate(var(--r0)); }
+    18% { opacity: var(--alpha, 1); }
+    48% { transform: translate(var(--dx), -12px) scale(1) rotate(var(--rm)); }
+    78% { opacity: var(--alpha, 1); }
+    100% { opacity: 0; transform: translate(var(--end-x), -38px) scale(.98) rotate(var(--r1)); }
   }
-  #hint {
-    position: fixed;
-    left: 50%;
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
-    font-size: 15px;
-    color: rgba(255, 248, 225, .75);
-    background: rgba(255, 210, 63, .12);
-    border: 1px solid rgba(255, 210, 63, .35);
-    padding: 10px 18px;
-    border-radius: 999px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: opacity .6s;
-    white-space: nowrap;
-  }
-  #hint:focus-visible, .card button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-  .veil {
-    position: fixed; inset: 0;
-    display: grid; place-items: center;
-    padding: 20px;
-    background: rgba(7, 6, 10, .55);
-    opacity: 0; pointer-events: none;
-    transition: opacity .7s ease;
-  }
-  .veil.open { opacity: 1; pointer-events: auto; }
-  .card {
-    width: min(360px, 100%);
-    background: var(--cream);
-    color: var(--ink);
-    border-radius: 22px 22px 22px 6px;
-    padding: 28px 24px 22px;
-    text-align: center;
-    box-shadow: 0 0 60px rgba(255, 190, 0, .45);
-    transform: translateY(30px) rotate(-2deg) scale(.92);
-    transition: transform .8s cubic-bezier(.2, .9, .3, 1.2);
-    position: relative;
-  }
-  .veil.open .card { transform: translateY(0) rotate(-1deg) scale(1); }
-  .card .bloom { font-size: 64px; line-height: 1; margin-top: -60px; }
-  .card h1 {
-    font-family: "Caveat", "Segoe Script", cursive;
-    font-size: 44px; line-height: 1.05; margin: 10px 0 8px; color: #c77d00;
-  }
-  .card p { font-size: 17px; line-height: 1.55; margin: 0 0 12px; }
-  .card .sign { font-family: "Caveat", cursive; font-size: 26px; margin: 4px 0 16px; }
-  .card button {
-    font-family: inherit; font-weight: 700; font-size: 15px;
-    background: var(--gold); color: var(--ink);
-    border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer;
-  }
-  .photo {
-    position: absolute;
-    width: var(--w, 110px);
-    padding: 6px 6px 18px;
-    background: var(--cream);
-    border-radius: 4px;
-    box-shadow: 0 0 24px rgba(255, 200, 40, .55);
-    opacity: 0;
-    animation: drift var(--dur, 12s) ease-in-out forwards;
-  }
-  .photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; }
-  .pop {
-    position: fixed;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-    animation: pop 1.4s ease-out forwards;
-    filter: drop-shadow(0 0 10px rgba(255, 190, 0, .7));
-  }
-  @keyframes pop {
-    0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-30deg); }
-    25%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(0deg); }
-    100% { opacity: 0; transform: translate(-50%, -140%) scale(1) rotate(15deg); }
-  }
-  #sound {
-    position: fixed;
-    top: calc(14px + env(safe-area-inset-top, 0px));
-    right: 14px;
-    width: 42px; height: 42px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 210, 63, .35);
-    background: rgba(255, 210, 63, .12);
-    color: var(--cream);
-    font-size: 18px;
-    cursor: pointer;
-    display: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .phrase, .flower, .photo, .pop { animation-duration: 0.01s !important; }
-  }
+  .photo { width: var(--w, 145px); margin: 0; padding: 7px 7px 0; border: 0; background: #f5edda; color: #735e45; border-radius: 2px; box-shadow: 0 12px 36px #0007, 0 0 22px #ffd23f12; pointer-events: auto; }
+  .photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #e1d4bd; }
+  .photo span { display: block; font: 500 19px/1.7 "Caveat", cursive; }
+  .photo:hover { animation-play-state: paused; box-shadow: 0 12px 40px #0008, 0 0 25px #ffd23f44; }
+  .photo:focus-visible { animation-play-state: paused; opacity: 1; }
+  .controls { position: fixed; bottom: max(22px, env(safe-area-inset-bottom)); left: 16px; right: 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; z-index: 2; }
+  .pill, #sound { border: 1px solid #ffd23f40; color: var(--cream); background: #18121cdd; backdrop-filter: blur(12px); box-shadow: 0 6px 28px #0003; }
+  .pill { border-radius: 999px; padding: 11px 18px; font-size: 13px; transition: background .3s, border-color .3s; }
+  .pill:hover { background: #302331; border-color: #ffd23f90; }
+  #sound { position: fixed; top: max(22px, env(safe-area-inset-top)); right: 20px; width: 44px; height: 44px; border-radius: 50%; font-size: 18px; z-index: 2; }
+  #status { position: fixed; top: 75px; right: 20px; max-width: 230px; font-size: 12px; color: #e4c99b; text-align: right; }
+  dialog { border: 0; padding: 0; overflow: visible; max-width: calc(100vw - 36px); max-height: calc(100dvh - 60px); color: var(--ink); background: transparent; }
+  dialog::backdrop { background: #07060ac9; backdrop-filter: blur(7px); }
+  dialog[open] { animation: open-card .45s ease both; }
+  @keyframes open-card { from { opacity: 0; transform: translateY(18px) rotate(-2deg) scale(.96); } to { opacity: 1; transform: none; } }
+  .card { width: min(380px, calc(100vw - 36px)); padding: 24px; border-radius: 24px 24px 24px 6px; background: var(--cream); box-shadow: 0 0 70px #ffbe0022; text-align: center; max-height: calc(100dvh - 60px); overflow-y: auto; }
+  .card .bloom { font-size: 54px; }
+  .card h1 { font: 700 42px/1.05 "Caveat", cursive; color: #b47406; margin: 10px 0 14px; overflow-wrap: anywhere; }
+  .card p { font-size: 16px; line-height: 1.65; margin: 0 0 14px; }
+  .sign { font: 26px "Caveat", cursive; margin: 4px 0 16px; }
+  .card button { background: var(--gold); color: var(--ink); border: 0; border-radius: 999px; padding: 11px 20px; font-weight: 700; }
+  #photoViewer { width: min(640px, calc(100vw - 36px)); background: #f5edda; padding: 10px; border-radius: 4px; box-shadow: 0 20px 100px #0008; }
+  #fullPhoto { display: block; width: 100%; height: min(65dvh, calc(100dvh - 156px), 640px); object-fit: contain; background: #19151b; }
+  .viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0 0; }
+  .viewer-bar p { margin: 0; font: 23px "Caveat", cursive; text-align: center; }
+  .viewer-bar button { min-width: 44px; min-height: 44px; border: 0; border-radius: 50%; background: #e8ddc4; color: var(--ink); font-size: 22px; }
+  #closePhoto { position: absolute; top: 18px; right: 18px; width: 44px; height: 44px; border: 1px solid #ffffff66; border-radius: 50%; color: white; background: #17121dcc; font-size: 24px; }
+  .pop { position: fixed; z-index: 1; pointer-events: none; animation: pop 1.8s ease-out both; }
+  @keyframes pop { from { opacity: 0; transform: translate(-50%, -20%) scale(.4) rotate(-18deg); } 20% { opacity: 1; } to { opacity: 0; transform: translate(-20%, -150%) scale(1.1) rotate(12deg); } }
+  body.paused .phrase, body.paused .flower, body.paused .photo { animation-play-state: paused; }
+  body.still .phrase, body.still .photo { animation: none; opacity: 1; transform: rotate(var(--r0)); }
+  body.still .intro-note { display: none; }
+  @media (max-width: 480px) { .scene-copy { top: max(25px, env(safe-area-inset-top)); } .eyebrow { font-size: 8px; } .pill { padding: 10px 14px; font-size: 12px; } .controls { gap: 7px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } dialog[open] { animation: none; } }
 </style>
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
-<div id="floaters" aria-hidden="true"></div>
-<button id="sound" type="button" aria-label="Silenciar música">🔊</button>
-<button id="hint" type="button" style="display:none">Toca para abrir tu mensaje 💛</button>
-
-<div class="veil open" id="veil" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
+<p class="intro-note" aria-hidden="true">Hay un universo que me recuerda a ti</p>
+<div class="scene-copy scene-ui" aria-hidden="true"><p class="eyebrow">Un pequeño universo, solo para ti</p><p>Contigo, todo florece.</p></div>
+<div id="floaters"></div>
+<button id="sound" class="scene-ui" type="button" aria-label="Reproducir música" aria-pressed="false" hidden>♫</button>
+<p id="status" role="status"></p>
+<nav class="controls scene-ui" aria-label="Tu universo">
+  <button id="hint" class="pill" type="button">Tu mensaje 💛</button>
+  <button id="gallery" class="pill" type="button" disabled>Cargando recuerdos…</button>
+</nav>
+<dialog id="veil" aria-labelledby="cardTitle">
   <div class="card">
     <div class="bloom" aria-hidden="true">🌻</div>
     <h1 id="cardTitle">Para ti, Gianella 💛</h1>
     <p id="msg">Como sé que lo tuyo no es cuidar flores, te regalo estas, que no se marchitan. Para que sepas que cada día a tu lado brilla un poquito más.</p>
     <div class="sign" id="sign"></div>
-    <button type="button" id="close">Ver las flores otra vez</button>
+    <button type="button" id="close">Volver a nuestro universo</button>
   </div>
-</div>
-
+</dialog>
+<dialog id="photoViewer" aria-label="Nuestros recuerdos">
+  <img id="fullPhoto" alt="">
+  <button type="button" id="closePhoto" aria-label="Cerrar foto">×</button>
+  <div class="viewer-bar">
+    <button type="button" id="prevPhoto" aria-label="Foto anterior">‹</button>
+    <p id="photoCaption" aria-live="polite"></p>
+    <button type="button" id="nextPhoto" aria-label="Foto siguiente">›</button>
+  </div>
+</dialog>
+<noscript><p>Activa JavaScript para descubrir las flores y los recuerdos 💛</p></noscript>
 <script src="script.js"></script>
 </body>
 </html>

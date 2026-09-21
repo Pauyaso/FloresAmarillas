@@ -1,266 +1,360 @@
-/* =========================================================
-   CONFIGURACIÓN — cambia aquí lo que quieras
-   ========================================================= */
+/* Personaliza aquí las fotos, la canción y las frases.
+   Al añadir una foto a assets/fotos, añade también su nombre a esta lista.
+   Funciona al abrir index.html directamente y en alojamientos estáticos. */
 const CONFIG = {
-  // Carpeta de fotos: sube tus imágenes a assets/fotos/ y aparecerán solas,
-  // con cualquier nombre (jpg, jpeg, png, webp o gif).
   carpetaFotos: "assets/fotos",
-  // Canción opcional (mp3). Empieza al tocar el botón, porque el iPhone
-  // no deja poner música sola. Déjalo en "" si no quieres música.
+  fotos: [
+    { archivo: "WhatsApp Image 2026-09-21 at 10.50.56.jpeg", texto: "Mi lugar favorito" },
+    { archivo: "WhatsApp Image 2026-09-21 at 10.50.57.jpeg", texto: "Un ratito contigo" },
+    { archivo: "WhatsApp Image 2026-09-21 at 10.50.57 (1).jpeg", texto: "De esos días bonitos" },
+    { archivo: "WhatsApp Image 2026-09-21 at 10.50.57 (2).jpeg", texto: "Y todos los que faltan" }
+  ],
   cancion: "assets/cancion.mp3",
-  // Frases que flotan
   frases: ["Te quiero", "Eres mi sol ☀️", "Mi amor", "Siempre juntos", "Me encantas",
-           "Eres preciosa", "Mi flor favorita", "Contigo todo brilla", "Te adoro"],
+    "Eres preciosa", "Mi flor favorita", "Contigo todo brilla", "Te adoro"]
 };
 
 (() => {
-  // Personalización por enlace: ?para=Lucía&de=Carlos
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const random = (min, max) => min + Math.random() * (max - min);
+  const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+  const smooth = value => { const p = clamp(value); return p * p * (3 - 2 * p); };
+  const pick = items => items[Math.floor(Math.random() * items.length)];
   const q = new URLSearchParams(location.search);
-  const para = (q.get("para") || "Gianella").trim().slice(0, 30);
+  const para = (q.get("para") || "Gianella").trim().slice(0, 30) || "Gianella";
   const de = (q.get("de") || "").trim().slice(0, 30);
-  if (para) document.getElementById("cardTitle").textContent = `Para ti, ${para} 💛`;
-  if (de) document.getElementById("sign").textContent = `— ${de}`;
-
-  const phrases = CONFIG.frases.slice();
-  if (para) phrases.push(para + " 💛");
-
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const cv = document.getElementById("sky");
+  $("cardTitle").textContent = "Para ti, " + para + " 💛";
+  $("sign").textContent = de ? "— " + de : "";
+  const phrases = [...CONFIG.frases, para + " 💛"];
+  const blooms = ["🌻", "🌼", "🌻"];
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  let reduced = motion.matches;
+  document.body.classList.toggle("still", reduced);
+  const cv = $("sky");
   const ctx = cv.getContext("2d");
-  let W, H, dpr, t = 0;
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = innerWidth; H = innerHeight;
-    cv.width = W * dpr; cv.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    buildHeart();
-    if (reduce) { ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, W, H); draw(); }
-  }
-
-  // Polvo dorado que gira en espiral
-  const dust = Array.from({ length: 420 }, () => ({
-    a: Math.random() * Math.PI * 2,
-    r: Math.pow(Math.random(), .6),
-    s: .002 + Math.random() * .006,
-    z: .4 + Math.random() * 1.6,
-    tw: Math.random() * Math.PI * 2
-  }));
-
-  // Partículas que forman el corazón
-  let heart = [];
-  function buildHeart() {
-    const scale = Math.min(W, H) / 38;
-    const cx = W / 2, cy = H * .36;
-    heart = [];
-    for (let i = 0; i < 260; i++) {
-      const k = (i / 260) * Math.PI * 2;
-      const x = 16 * Math.pow(Math.sin(k), 3);
-      const y = -(13 * Math.cos(k) - 5 * Math.cos(2 * k) - 2 * Math.cos(3 * k) - Math.cos(4 * k));
-      heart.push({
-        tx: cx + x * scale, ty: cy + y * scale,
-        x: reduce ? cx + x * scale : W / 2 + (Math.random() - .5) * W,
-        y: reduce ? cy + y * scale : H * .65 + (Math.random() - .5) * 40,
-        z: .6 + Math.random() * 1.4, tw: Math.random() * 6
-      });
-    }
-  }
-
-  function draw() {
-    t++;
-    ctx.fillStyle = "rgba(7, 6, 10, 0.28)";
-    ctx.fillRect(0, 0, W, H);
-
-    // Resplandor central
-    const cx = W / 2, cy = H * .65;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * .45);
-    g.addColorStop(0, "rgba(255, 220, 90, 0.20)");
-    g.addColorStop(1, "rgba(255, 220, 90, 0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-
-    // Galaxia de polvo
-    const R = Math.max(W, H) * .6;
-    for (const p of dust) {
-      p.a += reduce ? 0 : p.s;
-      const x = cx + Math.cos(p.a) * p.r * R;
-      const y = cy + Math.sin(p.a) * p.r * R * .28;
-      const alpha = .35 + .65 * Math.abs(Math.sin(t * .03 + p.tw));
-      ctx.fillStyle = `rgba(255, ${200 + (p.z * 20 | 0)}, 60, ${alpha})`;
-      ctx.beginPath(); ctx.arc(x, y, p.z, 0, 7); ctx.fill();
-    }
-
-    // Corazón que se va formando
-    const pull = Math.min(1, t / 240);
-    const beat = 1 + Math.sin(t * .06) * .025;
-    for (const p of heart) {
-      const tx = W / 2 + (p.tx - W / 2) * beat, ty = H * .36 + (p.ty - H * .36) * beat;
-      p.x += (tx - p.x) * .04 * pull;
-      p.y += (ty - p.y) * .04 * pull;
-      const alpha = .5 + .5 * Math.sin(t * .05 + p.tw);
-      ctx.fillStyle = `rgba(255, 215, 80, ${alpha})`;
-      ctx.shadowColor = "rgba(255, 200, 40, .9)"; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.z, 0, 7); ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-
-    if (!reduce) requestAnimationFrame(draw);
-  }
-
-  const layer = document.getElementById("floaters");
-  function spawn(cls, text, size) {
-    const el = document.createElement("div");
-    el.className = cls;
-    el.textContent = text;
-    el.style.left = (4 + Math.random() * (cls === "phrase" ? 52 : 82)) + "%";
-    el.style.top = (15 + Math.random() * 72) + "%";
-    el.style.fontSize = size + "px";
-    el.style.setProperty("--dur", (7 + Math.random() * 5) + "s");
-    el.style.setProperty("--r0", (Math.random() * 30 - 15) + "deg");
-    el.style.setProperty("--r1", (Math.random() * 30 - 15) + "deg");
-    layer.appendChild(el);
-    el.addEventListener("animationend", () => el.remove());
-  }
-  const blooms = ["🌻", "🌼", "💐", "🌻", "🌼"];
-  setInterval(() => spawn("flower", blooms[Math.random() * blooms.length | 0], 26 + Math.random() * 30), 700);
-  setInterval(() => spawn("phrase", phrases[Math.random() * phrases.length | 0], 20 + Math.random() * 14), 1300);
-
-  // Fotos: se leen solas de la carpeta
+  const layer = $("floaters");
+  const veil = $("veil");
+  const viewer = $("photoViewer");
+  const sound = $("sound");
+  const gallery = $("gallery");
+  let W = innerWidth, H = innerHeight, elapsed = 0, last = null, frameId = 0;
+  let ready = false, nextPhoto = 0, nextPhrase = 0, nextFlower = 0;
+  let heart = [], photoBag = [], lastPhoto = null, viewerIndex = 0;
+  let photoSettled = 0, photoFailures = 0, audioFailed = false, musicPending = false;
+  let musicTouched = false;
   const fotos = [];
-  const esImagen = n => /\.(jpe?g|png|webp|gif)$/i.test(n);
-  function probar(src) {
-    return new Promise(ok => {
-      const im = new Image();
-      im.onload = () => { fotos.push(src); ok(true); };
-      im.onerror = () => ok(false);
-      im.src = src;
+  const dust = Array.from({ length: 240 }, () => ({
+    x: Math.random(), y: Math.random(), radius: random(.4, 1.6), phase: random(0, Math.PI * 2), speed: random(.2, .6)
+  }));
+  const warp = Array.from({ length: 420 }, () => ({
+    x: random(-1, 1), y: random(-1, 1), z: random(.08, 1), speed: random(.32, .85)
+  }));
+  const audio = CONFIG.cancion ? new Audio(CONFIG.cancion) : null;
+  if (audio) { audio.loop = true; audio.preload = "metadata"; }
+
+  function heartLayout() {
+    return { x: W * (W > 700 ? .54 : .51), y: H * .36, scale: Math.min(W * .023, H * .014) };
+  }
+
+  function buildHeart() {
+    // Grosor irregular, leve inclinación y llegadas escalonadas.
+    heart = Array.from({ length: 280 }, (_, i) => {
+      const k = i / 280 * Math.PI * 2 + random(-.015, .015);
+      const x = 16 * Math.sin(k) ** 3;
+      const y = -(13 * Math.cos(k) - 5 * Math.cos(2 * k) - 2 * Math.cos(3 * k) - Math.cos(4 * k));
+      const angle = -.1;
+      return {
+        x: x * Math.cos(angle) - y * Math.sin(angle) + random(-.38, .38),
+        y: x * Math.sin(angle) + y * Math.cos(angle) + random(-.38, .38),
+        originX: Math.random(), originY: Math.random(), delay: random(0, .8),
+        bend: random(-100, 100), phase: random(0, Math.PI * 2), radius: random(.7, 1.8)
+      };
     });
   }
-  function usarLista(carpeta, nombres) {
-    nombres = [...new Set(nombres)].filter(esImagen);
-    nombres.sort(() => Math.random() - .5);
-    nombres.forEach(n => probar(`${carpeta}/${encodeURIComponent(n)}`));
-    return nombres.length > 0;
+
+  function resize() {
+    W = innerWidth; H = innerHeight;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Recoloca las fotos al rotar el móvil sin reiniciar el corazón.
+    for (const el of layer.children) {
+      if (el.classList.contains("photo")) sizePhoto(el);
+      place(el);
+    }
+    if (reduced) render(0);
   }
-  async function listarGitHub(carpeta) {
-    const host = location.hostname;
-    if (!host.endsWith(".github.io")) return [];
-    const usuario = host.split(".")[0];
-    const primera = location.pathname.split("/").filter(Boolean)[0];
-    const repo = primera && !primera.includes(".") ? primera : host;
-    const api = `https://api.github.com/repos/${usuario}/${repo}`;
-    const listar = async ref => {
-      try {
-        const r = await fetch(`${api}/contents/${carpeta}${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`);
-        if (!r.ok) return [];
-        return (await r.json()).filter(f => f.type === "file").map(f => f.name);
-      } catch (e) { return []; }
-    };
-    // Primero la rama por defecto; si ahí no hay fotos, probamos las demás ramas
-    let nombres = await listar("");
-    if (nombres.some(esImagen)) return nombres;
-    try {
-      const r = await fetch(`${api}/branches`);
-      if (r.ok) {
-        for (const b of await r.json()) {
-          nombres = await listar(b.name);
-          if (nombres.some(esImagen)) return nombres;
-        }
+
+  function nebula(x, y, radius, color) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    g.addColorStop(0, color); g.addColorStop(1, "transparent");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawUniverse(time) {
+    const arrival = reduced ? 1 : smooth((time - 2.8) / 2.6);
+    ctx.save(); ctx.globalAlpha = arrival;
+    nebula(W * .3, H * .66, Math.max(W, H) * .6, "rgba(144, 71, 38, .17)");
+    nebula(W * .85, H * .3, Math.max(W, H) * .48, "rgba(68, 48, 114, .16)");
+    for (const p of dust) {
+      const x = (p.x * W + Math.sin(time * .09 + p.phase) * 14 + W) % W;
+      const y = (p.y * H + Math.cos(time * .06 + p.phase) * 10 + H) % H;
+      const alpha = .22 + .45 * (.5 + .5 * Math.sin(time * p.speed + p.phase));
+      ctx.fillStyle = "rgba(255, 224, 161, " + alpha + ")";
+      ctx.beginPath(); ctx.arc(x, y, p.radius, 0, Math.PI * 2); ctx.fill();
+    }
+    const shape = heartLayout();
+    const beat = reduced ? 1 : 1 + Math.sin(time * 1.5) * .013 + Math.sin(time * 2.8) * .004;
+    ctx.shadowColor = "#ffd173"; ctx.shadowBlur = 7;
+    for (const p of heart) {
+      const progress = reduced ? 1 : smooth((time - 3.5 - p.delay) / 3.3);
+      const tx = shape.x + p.x * shape.scale * beat + Math.sin(time * .5 + p.phase) * 1.4;
+      const ty = shape.y + p.y * shape.scale * beat + Math.cos(time * .65 + p.phase) * 1.8;
+      const arc = Math.sin(progress * Math.PI) * p.bend;
+      const x = p.originX * W * (1 - progress) + tx * progress + arc;
+      const y = p.originY * H * (1 - progress) + ty * progress - arc * .5;
+      const alpha = (.48 + .28 * Math.sin(time * 1.2 + p.phase)) * (reduced ? 1 : smooth((time - 3.2) / 1.3));
+      ctx.fillStyle = "rgba(255, 215, 129, " + alpha + ")";
+      ctx.beginPath(); ctx.arc(x, y, p.radius, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawWarp(time, dt) {
+    if (reduced || time >= 5.7) return;
+    const intensity = 1 - smooth((time - 3.1) / 2.6);
+    const speed = (.2 + smooth(time / 1.3) * 2) * (1 - .94 * smooth((time - 2.9) / 2.8));
+    const cx = W * .5 + Math.sin(time * .65) * W * .035;
+    const cy = H * .46 + Math.sin(time * .8) * H * .025;
+    ctx.save(); ctx.globalAlpha = intensity;
+    for (const p of warp) {
+      p.z -= p.speed * dt * speed;
+      if (p.z < .035) { p.z = 1; p.x = random(-1, 1); p.y = random(-1, 1); }
+      const tail = p.z + .07 * speed;
+      const x = cx + p.x / p.z * W * .55;
+      const y = cy + p.y / p.z * H * .55;
+      ctx.strokeStyle = "rgba(255, " + Math.round(219 + p.z * 28) + ", " + Math.round(170 + p.z * 65) + ", " + clamp(1 - p.z, .1, .9) + ")";
+      ctx.lineWidth = .5 + (1 - p.z) * 1.1;
+      ctx.beginPath(); ctx.moveTo(cx + p.x / tail * W * .55, cy + p.y / tail * H * .55); ctx.lineTo(x, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render(dt) {
+    if (!ctx) return;
+    ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, W, H);
+    drawUniverse(reduced ? 8 : elapsed);
+    drawWarp(elapsed, dt);
+  }
+
+  function frame(now) {
+    frameId = 0;
+    const dt = last === null ? 0 : clamp((now - last) / 1000, 0, .05);
+    last = now;
+    elapsed += dt;
+    render(dt);
+    if (!ready && (reduced || elapsed >= 6.8)) startAmbient();
+    if (ready && !reduced) {
+      if (elapsed >= nextPhoto) { spawnPhoto(); nextPhoto = elapsed + random(5.8, 8.6); }
+      if (elapsed >= nextPhrase) { spawnDecoration("phrase"); nextPhrase = elapsed + random(4.2, 7.2); }
+      if (elapsed >= nextFlower) { spawnDecoration("flower"); nextFlower = elapsed + random(2.7, 5.4); }
+    }
+    if (!reduced && !isPaused()) frameId = requestAnimationFrame(frame);
+  }
+
+  function isPaused() { return document.hidden || veil.open || viewer.open; }
+  function syncPause() {
+    const paused = isPaused();
+    document.body.classList.toggle("paused", paused);
+    cancelAnimationFrame(frameId); frameId = 0; last = null;
+    if (!paused) frameId = requestAnimationFrame(frame);
+  }
+
+  function startAmbient() {
+    ready = true;
+    document.body.classList.add("ready");
+    document.querySelector(".intro-note")?.remove();
+    sound.hidden = !audio;
+    updateMusic();
+    spawnPhoto();
+    if (reduced) { spawnPhoto(); spawnDecoration("phrase"); }
+    nextPhoto = elapsed + random(6, 8);
+    nextPhrase = elapsed + 1.2;
+    nextFlower = elapsed + 2.1;
+  }
+
+  function place(el) {
+    const width = el.offsetWidth || 120, height = el.offsetHeight || 150;
+    const margin = 28;
+    const right = Math.max(margin, W - width - margin);
+    const bottom = Math.max(112, H - height - 106);
+    const shape = heartLayout();
+    const occupied = [...layer.children].filter(other => other !== el).map(other => other.getBoundingClientRect());
+    let best = { x: margin, y: bottom, score: Infinity };
+    for (let i = 0; i < 36; i++) {
+      const x = random(margin, right), y = random(Math.min(120, bottom), bottom);
+      const overlap = occupied.reduce((score, r) => score + Math.max(0, Math.min(x + width + 20, r.right) - Math.max(x - 20, r.left)) * Math.max(0, Math.min(y + height + 35, r.bottom) - Math.max(y - 35, r.top)), 0);
+      const crossesHeart = x < shape.x + 16 * shape.scale && x + width > shape.x - 16 * shape.scale && y < shape.y + 17 * shape.scale && y + height > shape.y - 13 * shape.scale;
+      const score = overlap + (crossesHeart ? width * height * 2 : 0);
+      if (score < best.score) best = { x, y, score };
+      if (score === 0) break;
+    }
+    el.style.left = best.x + "px"; el.style.top = best.y + "px";
+  }
+
+  function float(el, duration) {
+    el.style.setProperty("--dur", duration + "s");
+    el.style.setProperty("--r0", random(-11, 9) + "deg");
+    el.style.setProperty("--rm", random(-6, 7) + "deg");
+    el.style.setProperty("--r1", random(-9, 12) + "deg");
+    el.style.setProperty("--dx", random(-12, 12) + "px");
+    el.style.setProperty("--end-x", random(-10, 10) + "px");
+    layer.appendChild(el); place(el);
+    if (!reduced) el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  function spawnDecoration(kind) {
+    if (layer.querySelectorAll("." + kind).length >= (kind === "phrase" ? 2 : 4)) return;
+    const el = document.createElement("div");
+    el.className = kind; el.setAttribute("aria-hidden", "true");
+    el.textContent = pick(kind === "phrase" ? phrases : blooms);
+    el.style.fontSize = (kind === "phrase" ? random(23, 30) : random(22, 35)) + "px";
+    el.style.setProperty("--alpha", kind === "phrase" ? ".85" : ".65");
+    float(el, random(11, 16));
+  }
+
+  function sizePhoto(el) {
+    el.style.setProperty("--w", (W < 600 ? clamp(W * .31, 94, 138) : random(145, 185)) + "px");
+  }
+
+  function spawnPhoto() {
+    if (!ready || !fotos.length || layer.querySelectorAll(".photo").length >= (W < 600 ? 2 : 3)) return;
+    const visible = new Set([...layer.querySelectorAll(".photo")].map(el => el.dataset.src));
+    if (!photoBag.length) {
+      photoBag = fotos.slice();
+      for (let i = photoBag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [photoBag[i], photoBag[j]] = [photoBag[j], photoBag[i]];
       }
-    } catch (e) {}
-    return [];
+    }
+    let idx = photoBag.findIndex(photo => !visible.has(photo.src) && photo !== lastPhoto);
+    if (idx < 0) idx = photoBag.findIndex(photo => !visible.has(photo.src));
+    if (idx < 0) return;
+    const photo = photoBag.splice(idx, 1)[0]; lastPhoto = photo;
+    const el = document.createElement("button");
+    el.type = "button"; el.className = "photo"; el.dataset.src = photo.src;
+    el.setAttribute("aria-label", "Ampliar recuerdo: " + photo.texto);
+    sizePhoto(el);
+    const img = document.createElement("img"); img.src = photo.src; img.alt = "";
+    const caption = document.createElement("span"); caption.textContent = photo.texto;
+    el.append(img, caption);
+    el.addEventListener("click", () => openPhoto(fotos.indexOf(photo)));
+    float(el, random(17, 21));
   }
-  async function listarServidor(carpeta) {
-    // Servidores locales (Live Server, python -m http.server...) muestran el
-    // contenido de la carpeta como una página con enlaces: los leemos.
-    try {
-      const r = await fetch(`${carpeta}/`);
-      if (!r.ok) return [];
-      const doc = new DOMParser().parseFromString(await r.text(), "text/html");
-      return [...doc.querySelectorAll("a[href]")]
-        .map(a => decodeURIComponent(a.getAttribute("href").split(/[?#]/)[0].split("/").pop()));
-    } catch (e) { return []; }
-  }
-  async function cargarFotos() {
-    const carpeta = CONFIG.carpetaFotos.replace(/\/$/, "");
-    // 1) En GitHub Pages: pedimos a GitHub la lista de archivos de la carpeta
-    if (usarLista(carpeta, await listarGitHub(carpeta))) return;
-    // 2) En local con servidor: leemos el listado de la carpeta
-    if (usarLista(carpeta, await listarServidor(carpeta))) return;
-    // 3) Plan B (otros sitios o sin conexión con GitHub): foto1.jpg, foto2.jpg...
-    for (let i = 1; i <= 40; i++) {
-      let ok = false;
-      for (const ext of ["jpg", "jpeg", "png", "webp"]) {
-        if (await probar(`${carpeta}/foto${i}.${ext}`)) { ok = true; break; }
-      }
-      if (!ok) break;
+
+  function updateGallery() {
+    gallery.disabled = !fotos.length;
+    gallery.textContent = fotos.length ? "Nuestros recuerdos · " + fotos.length : photoSettled === CONFIG.fotos.length ? "Sin fotos disponibles" : "Cargando recuerdos…";
+    if (photoSettled === CONFIG.fotos.length && photoFailures) {
+      console.warn(photoFailures + " foto(s) no se pudieron cargar. Revisa CONFIG.fotos y assets/fotos.");
     }
   }
-  cargarFotos();
-  let fotoIdx = 0;
-  function spawnPhoto() {
-    if (!fotos.length) return;
-    const el = document.createElement("div");
-    el.className = "photo";
-    const img = document.createElement("img");
-    img.src = fotos[fotoIdx++ % fotos.length];
-    img.alt = "";
-    el.appendChild(img);
-    el.style.left = (4 + Math.random() * 56) + "%";
-    el.style.top = (12 + Math.random() * 60) + "%";
-    el.style.setProperty("--w", (90 + Math.random() * 40) + "px");
-    el.style.setProperty("--dur", (10 + Math.random() * 4) + "s");
-    el.style.setProperty("--r0", (Math.random() * 24 - 12) + "deg");
-    el.style.setProperty("--r1", (Math.random() * 24 - 12) + "deg");
-    layer.appendChild(el);
-    el.addEventListener("animationend", () => el.remove());
-  }
-  setTimeout(spawnPhoto, 2500);
-  setInterval(spawnPhoto, 4200);
 
-  // Música
-  const sound = document.getElementById("sound");
-  let audio = null;
-  if (CONFIG.cancion) {
-    audio = new Audio(CONFIG.cancion);
-    audio.loop = true;
-    audio.preload = "auto";
+  async function loadPhoto(entry) {
+    const photo = typeof entry === "string" ? { archivo: entry, texto: "Contigo" } : entry;
+    const src = CONFIG.carpetaFotos.replace(/\/$/, "") + "/" + encodeURIComponent(photo.archivo);
+    const loaded = await new Promise(resolve => {
+      const img = new Image();
+      const timeout = setTimeout(() => finish(false), 15000);
+      function finish(ok) { clearTimeout(timeout); img.onload = null; img.onerror = null; resolve(ok); }
+      img.onload = () => finish(img.naturalWidth > 0); img.onerror = () => finish(false); img.src = src;
+    });
+    photoSettled++;
+    if (loaded) {
+      fotos.push({ ...photo, src }); photoBag = [];
+      if (ready && (reduced || !layer.querySelector(".photo"))) spawnPhoto();
+    } else { photoFailures++; }
+    updateGallery();
   }
-  function startMusic() {
-    if (!audio || !audio.paused) return;
-    audio.play().then(() => { sound.style.display = "block"; }).catch(() => {});
+
+  function updateMusic() {
+    const playing = audio && !audio.paused && !audioFailed;
+    sound.textContent = audioFailed ? "!" : playing ? "🔊" : "♫";
+    sound.setAttribute("aria-label", audioFailed ? "Volver a intentar reproducir música" : playing ? "Pausar música" : "Reproducir música");
+    sound.setAttribute("aria-pressed", String(Boolean(playing)));
   }
-  sound.addEventListener("click", e => {
-    e.stopPropagation();
-    if (audio.paused) { audio.play(); sound.textContent = "🔊"; sound.setAttribute("aria-label", "Silenciar música"); }
-    else { audio.pause(); sound.textContent = "🔇"; sound.setAttribute("aria-label", "Poner música"); }
+
+  async function startMusic() {
+    if (!audio || musicPending || !audio.paused) return;
+    musicPending = true;
+    try {
+      if (audioFailed) { audioFailed = false; audio.load(); }
+      await audio.play(); $("status").textContent = "";
+    } catch {
+      $("status").textContent = audioFailed ? "No se pudo cargar la canción." : "Toca ♫ para activar la música.";
+    } finally { musicPending = false; updateMusic(); }
+  }
+  if (audio) {
+    audio.addEventListener("play", updateMusic);
+    audio.addEventListener("pause", updateMusic);
+    audio.addEventListener("error", () => { audioFailed = true; updateMusic(); if (ready) $("status").textContent = "No se pudo cargar la canción."; });
+  }
+  sound.addEventListener("click", () => {
+    musicTouched = true;
+    if (!audio) return;
+    if (audio.paused) startMusic(); else audio.pause();
   });
 
-  // Al tocar la pantalla brota una flor
+  function showPhoto(index) {
+    viewerIndex = (index + fotos.length) % fotos.length;
+    const photo = fotos[viewerIndex];
+    $("fullPhoto").src = photo.src; $("fullPhoto").alt = photo.texto;
+    $("photoCaption").textContent = photo.texto + " · " + (viewerIndex + 1) + "/" + fotos.length;
+    $("prevPhoto").disabled = $("nextPhoto").disabled = fotos.length < 2;
+  }
+  function openPhoto(index = 0) { if (!fotos.length) return; showPhoto(index); viewer.showModal(); syncPause(); }
+  gallery.addEventListener("click", () => openPhoto());
+  $("prevPhoto").addEventListener("click", () => showPhoto(viewerIndex - 1));
+  $("nextPhoto").addEventListener("click", () => showPhoto(viewerIndex + 1));
+  $("closePhoto").addEventListener("click", () => viewer.close());
+  viewer.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); showPhoto(viewerIndex + (e.key === "ArrowLeft" ? -1 : 1)); }
+  });
+  $("hint").addEventListener("click", () => { veil.showModal(); syncPause(); });
+  $("close").addEventListener("click", () => veil.close());
+  for (const dialog of [veil, viewer]) {
+    dialog.addEventListener("close", () => {
+      syncPause();
+      if (!document.activeElement || document.activeElement === document.body) (dialog === viewer ? gallery : $("hint")).focus();
+    });
+    dialog.addEventListener("click", e => {
+      const r = dialog.getBoundingClientRect();
+      if (e.target === dialog && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dialog.close();
+    });
+  }
+
   addEventListener("pointerdown", e => {
-    if (e.target.closest(".card, #sound")) return;
-    startMusic();
-    const f = document.createElement("div");
-    f.className = "pop";
-    f.textContent = blooms[Math.random() * blooms.length | 0];
-    f.style.left = e.clientX + "px";
-    f.style.top = e.clientY + "px";
-    f.style.fontSize = (34 + Math.random() * 20) + "px";
-    document.body.appendChild(f);
-    f.addEventListener("animationend", () => f.remove());
+    if (!ready || isPaused() || e.button !== 0 || e.target.closest("button, dialog")) return;
+    if (audio && !audioFailed && sound.getAttribute("aria-pressed") === "false" && !musicTouched) startMusic();
+    if (reduced || document.querySelectorAll(".pop").length >= 8) return;
+    const el = document.createElement("div"); el.className = "pop"; el.setAttribute("aria-hidden", "true"); el.textContent = pick(blooms);
+    el.style.left = e.clientX + "px"; el.style.top = e.clientY + "px"; el.style.fontSize = random(28, 42) + "px";
+    document.body.appendChild(el); el.addEventListener("animationend", () => el.remove(), { once: true });
+  });
+  document.addEventListener("visibilitychange", syncPause);
+  addEventListener("resize", resize);
+  motion.addEventListener("change", e => {
+    reduced = e.matches; document.body.classList.toggle("still", reduced);
+    layer.replaceChildren(); elapsed = Math.max(elapsed, 8);
+    if (!ready) startAmbient();
+    else { spawnPhoto(); if (reduced) { spawnPhoto(); spawnDecoration("phrase"); } }
+    render(0); syncPause();
   });
 
-  const veil = document.getElementById("veil");
-  const hint = document.getElementById("hint");
-  veil.classList.remove("open");
-  hint.style.display = "";
-  function openCard() { veil.classList.add("open"); hint.style.opacity = 0; document.getElementById("close").focus(); }
-  function closeCard() { veil.classList.remove("open"); hint.style.opacity = 1; }
-  hint.addEventListener("click", openCard);
-  document.getElementById("close").addEventListener("click", closeCard);
-  setTimeout(() => { if (!veil.classList.contains("open")) openCard(); }, 11000);
-
-  addEventListener("resize", resize);
-  resize();
-  if (!reduce) { ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, W, H); draw(); }
+  buildHeart(); resize();
+  if (!ctx || reduced) { elapsed = 8; startAmbient(); render(0); }
+  CONFIG.fotos.forEach(loadPhoto);
+  updateGallery();
+  syncPause();
 })();
