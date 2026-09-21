@@ -105,14 +105,51 @@
     background: var(--gold); color: var(--ink);
     border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer;
   }
+  .photo {
+    position: absolute;
+    width: var(--w, 110px);
+    padding: 6px 6px 18px;
+    background: var(--cream);
+    border-radius: 4px;
+    box-shadow: 0 0 24px rgba(255, 200, 40, .55);
+    opacity: 0;
+    animation: drift var(--dur, 12s) ease-in-out forwards;
+  }
+  .photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; }
+  .pop {
+    position: fixed;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: pop 1.4s ease-out forwards;
+    filter: drop-shadow(0 0 10px rgba(255, 190, 0, .7));
+  }
+  @keyframes pop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-30deg); }
+    25%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -140%) scale(1) rotate(15deg); }
+  }
+  #sound {
+    position: fixed;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    right: 14px;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 210, 63, .35);
+    background: rgba(255, 210, 63, .12);
+    color: var(--cream);
+    font-size: 18px;
+    cursor: pointer;
+    display: none;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .phrase, .flower { animation-duration: 0.01s !important; }
+    .phrase, .flower, .photo, .pop { animation-duration: 0.01s !important; }
   }
 </style>
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
 <div id="floaters" aria-hidden="true"></div>
+<button id="sound" type="button" aria-label="Silenciar música">🔊</button>
 <button id="hint" type="button" style="display:none">Toca para abrir tu mensaje 💛</button>
 
 <div class="veil open" id="veil" role="dialog" aria-modal="true" aria-labelledby="cardTitle">
@@ -126,6 +163,21 @@
 </div>
 
 <script>
+/* =========================================================
+   CONFIGURACIÓN — cambia aquí lo que quieras
+   ========================================================= */
+const CONFIG = {
+  // Carpeta de fotos: sube tus imágenes a assets/fotos/ y aparecerán solas,
+  // con cualquier nombre (jpg, jpeg, png, webp o gif).
+  carpetaFotos: "assets/fotos",
+  // Canción opcional (mp3). Empieza al tocar el botón, porque el iPhone
+  // no deja poner música sola. Déjalo en "" si no quieres música.
+  cancion: "assets/cancion.mp3",
+  // Frases que flotan
+  frases: ["Te quiero", "Eres mi sol ☀️", "Mi amor", "Siempre juntos", "Me encantas",
+           "Eres preciosa", "Mi flor favorita", "Contigo todo brilla", "Te adoro"],
+};
+
 (() => {
   // Personalización por enlace: ?para=Lucía&de=Carlos
   const q = new URLSearchParams(location.search);
@@ -134,8 +186,7 @@
   if (para) document.getElementById("cardTitle").textContent = `Para ti, ${para} 💛`;
   if (de) document.getElementById("sign").textContent = `— ${de}`;
 
-  const phrases = ["Te quiero", "Eres mi sol ☀️", "Mi amor", "Siempre juntos", "Me encantas",
-                   "Eres preciosa", "Mi flor favorita", "Contigo todo brilla", "Te adoro"];
+  const phrases = CONFIG.frases.slice();
   if (para) phrases.push(para + " 💛");
 
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -238,6 +289,98 @@
   const blooms = ["🌻", "🌼", "💐", "🌻", "🌼"];
   setInterval(() => spawn("flower", blooms[Math.random() * blooms.length | 0], 26 + Math.random() * 30), 700);
   setInterval(() => spawn("phrase", phrases[Math.random() * phrases.length | 0], 20 + Math.random() * 14), 1300);
+
+  // Fotos: se leen solas de la carpeta
+  const fotos = [];
+  const esImagen = n => /\.(jpe?g|png|webp|gif)$/i.test(n);
+  function probar(src) {
+    return new Promise(ok => {
+      const im = new Image();
+      im.onload = () => { fotos.push(src); ok(true); };
+      im.onerror = () => ok(false);
+      im.src = src;
+    });
+  }
+  async function cargarFotos() {
+    const carpeta = CONFIG.carpetaFotos.replace(/\/$/, "");
+    // 1) En GitHub Pages: pedimos a GitHub la lista de archivos de la carpeta
+    const host = location.hostname;
+    if (host.endsWith(".github.io")) {
+      const usuario = host.split(".")[0];
+      const primera = location.pathname.split("/").filter(Boolean)[0];
+      const repo = primera && !primera.includes(".") ? primera : host;
+      try {
+        const r = await fetch(`https://api.github.com/repos/${usuario}/${repo}/contents/${carpeta}`);
+        if (r.ok) {
+          const lista = (await r.json()).filter(f => f.type === "file" && esImagen(f.name));
+          lista.sort(() => Math.random() - .5);
+          lista.forEach(f => probar(`${carpeta}/${encodeURIComponent(f.name)}`));
+          if (lista.length) return;
+        }
+      } catch (e) {}
+    }
+    // 2) Plan B (otros sitios o sin conexión con GitHub): foto1.jpg, foto2.jpg...
+    for (let i = 1; i <= 40; i++) {
+      let ok = false;
+      for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+        if (await probar(`${carpeta}/foto${i}.${ext}`)) { ok = true; break; }
+      }
+      if (!ok) break;
+    }
+  }
+  cargarFotos();
+  let fotoIdx = 0;
+  function spawnPhoto() {
+    if (!fotos.length) return;
+    const el = document.createElement("div");
+    el.className = "photo";
+    const img = document.createElement("img");
+    img.src = fotos[fotoIdx++ % fotos.length];
+    img.alt = "";
+    el.appendChild(img);
+    el.style.left = (4 + Math.random() * 56) + "%";
+    el.style.top = (12 + Math.random() * 60) + "%";
+    el.style.setProperty("--w", (90 + Math.random() * 40) + "px");
+    el.style.setProperty("--dur", (10 + Math.random() * 4) + "s");
+    el.style.setProperty("--r0", (Math.random() * 24 - 12) + "deg");
+    el.style.setProperty("--r1", (Math.random() * 24 - 12) + "deg");
+    layer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }
+  setTimeout(spawnPhoto, 2500);
+  setInterval(spawnPhoto, 4200);
+
+  // Música
+  const sound = document.getElementById("sound");
+  let audio = null;
+  if (CONFIG.cancion) {
+    audio = new Audio(CONFIG.cancion);
+    audio.loop = true;
+    audio.preload = "auto";
+  }
+  function startMusic() {
+    if (!audio || !audio.paused) return;
+    audio.play().then(() => { sound.style.display = "block"; }).catch(() => {});
+  }
+  sound.addEventListener("click", e => {
+    e.stopPropagation();
+    if (audio.paused) { audio.play(); sound.textContent = "🔊"; sound.setAttribute("aria-label", "Silenciar música"); }
+    else { audio.pause(); sound.textContent = "🔇"; sound.setAttribute("aria-label", "Poner música"); }
+  });
+
+  // Al tocar la pantalla brota una flor
+  addEventListener("pointerdown", e => {
+    if (e.target.closest(".card, #sound")) return;
+    startMusic();
+    const f = document.createElement("div");
+    f.className = "pop";
+    f.textContent = blooms[Math.random() * blooms.length | 0];
+    f.style.left = e.clientX + "px";
+    f.style.top = e.clientY + "px";
+    f.style.fontSize = (34 + Math.random() * 20) + "px";
+    document.body.appendChild(f);
+    f.addEventListener("animationend", () => f.remove());
+  });
 
   const veil = document.getElementById("veil");
   const hint = document.getElementById("hint");
